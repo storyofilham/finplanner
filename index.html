@@ -92,6 +92,7 @@ body[data-room="Ayah"] .fld:has(select[name="who"]),body[data-room="Bunda"] .fld
 <div class="hero"><div class="row between"><div><h1>💰 Financial Family Plan</h1><div class="mu">Family finances · Ayah &amp; Bunda</div></div><div class="mu"><span id="stat">Loading…</span> · <a href="#" id="so" style="color:var(--ac)">Sign out</a></div></div></div><div class="row" id="rooms" style="margin:10px 0 0"></div>
 <nav id="nav"></nav><div id="app"><div class="empty">Loading data…</div></div><div id="modal"></div>
 </div>
+<script>window.__errs=[];window.addEventListener('error',function(e){window.__errs.push(e.message||'error')});setTimeout(function(){if(window.__ok)return;var a=document.getElementById('app');a.innerHTML='<div class="card" style="padding:22px"><h2>The app could not start</h2><div class="mu">Try: refresh with Ctrl+Shift+R, turn off ad-blockers or VPN for this site, or open it in another browser.<br><br>Technical note: '+(window.__errs.join(' | ')||'the script did not load (network access to gstatic.com may be blocked).')+'</div></div>'},6000)</script>
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
@@ -99,6 +100,7 @@ import {getFirestore,collection,doc,addDoc,setDoc,deleteDoc,onSnapshot,writeBatc
 /* ====== STEP: paste your Firebase settings here (see the guide) ====== */
 const firebaseConfig={apiKey:'PASTE_API_KEY',authDomain:'PASTE_AUTH_DOMAIN',projectId:'PASTE_PROJECT_ID',appId:'PASTE_APP_ID'};
 /* ==================================================================== */
+window.__ok=true;
 const configured=!String(firebaseConfig.apiKey).startsWith('PASTE');
 let gateMsg='';
 const $=s=>document.querySelector(s);
