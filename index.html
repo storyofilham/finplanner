@@ -105,8 +105,9 @@ const configured=!String(firebaseConfig.apiKey).startsWith('PASTE');
 let gateMsg='';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const rp=n=>'Rp'+Math.round(n||0).toLocaleString('id-ID');
-const sh=n=>{n=n||0;const a=Math.abs(n);return (n<0?'-':'')+(a>=1e9?(a/1e9).toFixed(1)+'B':a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e3?Math.round(a/1e3)+'K':a)};
+let hide=false;try{hide=localStorage.getItem('hide')==='1'}catch(e){}
+const rp=n=>hide?'Rp ••••••':'Rp'+Math.round(n||0).toLocaleString('id-ID');
+const sh=n=>{if(hide)return '••';n=n||0;const a=Math.abs(n);return (n<0?'-':'')+(a>=1e9?(a/1e9).toFixed(1)+'B':a>=1e6?(a/1e6).toFixed(1)+'M':a>=1e3?Math.round(a/1e3)+'K':a)};
 const ym=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 const TODAY=ym(new Date())+'-'+String(new Date().getDate()).padStart(2,'0');
 const dt=d=>new Date(d+'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
@@ -129,7 +130,9 @@ const opts=(a,v)=>a.map(x=>`<option${x===v?' selected':''}>${esc(x)}</option>`).
 const dl=(id,a)=>`<datalist id="${id}">${a.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;
 const mlabel=()=>{const[y,m]=cur.split('-').map(Number);return new Date(y,m-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'})};
 const shift=k=>{const[y,m]=cur.split('-').map(Number);cur=ym(new Date(y,m-1+k,1))};
-const mnav=()=>`<div class="row between" style="margin-bottom:10px"><button class="chip" data-a="shift" data-v="-1">‹</button><b>${mlabel()}</b><button class="chip" data-a="shift" data-v="1">›</button></div>`;
+const eyeBtn=()=>`<button class="room" data-a="eye" title="Hide or show amounts" aria-label="Hide or show amounts" style="padding:5px 11px">${hide?'🙈':'👁️'}</button>`;
+const eyeRow=()=>`<div class="row" style="margin-bottom:10px;justify-content:center">${eyeBtn()}</div>`;
+const mnav=()=>`<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:10px"><span></span><div class="row" style="gap:10px;flex-wrap:nowrap"><button class="chip" data-a="shift" data-v="-1">‹</button><b style="min-width:130px;text-align:center">${mlabel()}</b><button class="chip" data-a="shift" data-v="1">›</button></div><div>${eyeBtn()}</div></div>`;
 const empty=t=>`<div class="empty">${t}</div>`;
 const inM=t=>by(t).filter(x=>(x.date||'').startsWith(cur));
 const dflt=()=>cur===TODAY.slice(0,7)?TODAY:cur+'-01';
@@ -222,7 +225,7 @@ function invest(){
   const ds=[...new Set(iv.flatMap(x=>(x.hist||[]).map(h=>h.d)))].sort(),real=ds.map(d=>[dt(d),iv.reduce((s,x)=>{const h=(x.hist||[]).filter(z=>z.d<=d);return s+(h.length?h[h.length-1].v:0)},0)]);
   const ex=[['Jan',100],['Feb',103],['Mar',101],['Apr',108],['May',112],['Jun',118]];
   const bl=f=>{const g={};iv.forEach(x=>{const n=f(x)||'No goal';g[n]=(g[n]||0)+(+x.val||0)});const e=Object.entries(g).sort((a,b)=>b[1]-a[1]);return e.length?e.map(([n,v],i)=>`<div style="margin:8px 0"><div class="row between"><span>${esc(n)}</span><span class="mu">${rp(v)} · ${val?Math.round(v/val*100):0}%</span></div><div class="bar"><i style="width:${val?v/val*100:0}%;background:${PAL[i%8]}"></i></div></div>`).join(''):empty('No data yet')};
-  return snav('inv',[['all','All'],...kinds.map(x=>[x,x])])+`<div class="grid"><div class="card"><div class="sub">Cost</div><div class="big">${rp(cost)}</div></div><div class="card"><div class="sub">Current value</div><div class="big">${rp(val)}</div></div><div class="card"><div class="sub">Profit / loss</div><div class="big ${val>=cost?'pos':'neg'}">${rp(val-cost)}</div><div class="mu">${cost?((val-cost)/cost*100).toFixed(1)+'%':'—'}</div></div></div>
+  return eyeRow()+snav('inv',[['all','All'],...kinds.map(x=>[x,x])])+`<div class="grid"><div class="card"><div class="sub">Cost</div><div class="big">${rp(cost)}</div></div><div class="card"><div class="sub">Current value</div><div class="big">${rp(val)}</div></div><div class="card"><div class="sub">Profit / loss</div><div class="big ${val>=cost?'pos':'neg'}">${rp(val-cost)}</div><div class="mu">${cost?((val-cost)/cost*100).toFixed(1)+'%':'—'}</div></div></div>
   <div class="card"><h2>Portfolio growth</h2>${real.length>1?lc(real,'#2f7f79'):`<div class="mu" style="margin-bottom:6px">Example only. Update a holding's value over time and your real growth line will appear here.</div>${lc(ex,'#9aa5b1')}`}</div>
   <div class="card"><h2>Growth projection</h2><div class="mu" style="margin-bottom:8px">Starts from your current value of ${rp(val)}. Change the numbers to see what could happen.</div><div class="form card" style="margin:0 0 8px"><input id="p1" type="number" value="1000000" placeholder="Add per month (Rp)"><input id="p2" type="number" value="8" placeholder="Return per year (%)"><input id="p3" type="number" value="10" placeholder="Years"><button class="btn" data-a="proj">Calculate</button></div><div id="pjo"></div></div>
   <div class="grid g2"><div class="card"><h2>By type</h2>${bl(x=>x.kind)}</div><div class="card"><h2>By goal</h2>${bl(x=>x.goal)}</div></div>
@@ -241,7 +244,7 @@ function projects(){const p=by('prj');
   <div class="card">${p.length?p.map(x=>`<div class="item"><div>${esc(x.name)}<span class="tag">${esc(x.status)}</span><div class="mu">${x.due?'Due '+dt(x.due):'No deadline'}</div></div><div class="row"><b>${rp(x.budget)}</b><select data-a="stat" data-id="${x.id}" style="width:120px">${opts(['Planned','In progress','Done'],x.status)}</select><button class="btn ghost" data-a="del" data-id="${x.id}">Delete</button></div></div>`).join(''):empty('No projects yet')}</div>`}
 function edu(){return `<div class="card"><h2>Education cost calculator</h2><div class="mu" style="margin-bottom:8px">Enter today's cost, how many years until you need it, and your assumptions.</div><div class="form card"><input id="e1" type="number" value="100000000" placeholder="Cost today (Rp)"><input id="e2" type="number" value="10" placeholder="Needed in (years)"><input id="e3" type="number" value="10" placeholder="Cost inflation % per year"><input id="e4" type="number" value="6" placeholder="Investment return % per year"><button class="btn" data-a="calc">Calculate</button></div><div id="eout"></div></div>`}
 function calc(){const c=+$('#e1').value,n=+$('#e2').value,i=+$('#e3').value/100,r=+$('#e4').value/100,f=c*Math.pow(1+i,n),N=n*12,rm=r/12,p=N?(rm?f*rm/(Math.pow(1+rm,N)-1):f/N):0;$('#eout').innerHTML=`<div class="grid"><div class="card"><div class="sub">Estimated future cost</div><div class="big">${rp(f)}</div></div><div class="card"><div class="sub">Save per month</div><div class="big">${rp(p)}</div></div></div>`}
-function goalTab(){const k=subs.goal;return snav('goal',[['goal','Goals'],['prj','Projects'],['edu','Calculator']])+(k==='goal'?goals():k==='prj'?projects():edu())}
+function goalTab(){const k=subs.goal;return eyeRow()+snav('goal',[['goal','Goals'],['prj','Projects'],['edu','Calculator']])+(k==='goal'?goals():k==='prj'?projects():edu())}
 function kal(){
   const[y,m]=cur.split('-').map(Number),n=new Date(y,m,0).getDate(),off=(new Date(y,m-1,1).getDay()+6)%7,mm=String(m).padStart(2,'0'),P=cur+'-',pd=v=>P+String(Math.min(+v||1,n)).padStart(2,'0'),L=[];
   by('exp').forEach(x=>(x.date||'').startsWith(P)&&L.push({d:x.date,w:x.who,t:tt(x),a:-x.amt,k:'Expense'}));
@@ -274,11 +277,11 @@ function subsc(){
   <div class="card form" data-f="sub"><input name="name" placeholder="Name (RTI Business, Netflix, TradingView…)"><input name="cat" list="dls" placeholder="Category">${dl('dls',[...new Set(['Business','Trading','Entertainment','Software','Education',...all.map(x=>x.cat).filter(Boolean)])])}<input name="amt" type="number" inputmode="numeric" placeholder="Cost (Rp)"><select name="cycle"><option>Monthly</option><option>Yearly</option></select><input type="date" name="date" value="${TODAY}" title="Billing date"><select name="who"><option>Ayah</option><option>Bunda</option><option>Bersama</option></select><button class="btn" data-a="add" data-t="sub">Add</button></div>
   <div class="card">${list.length?list.map(({x,n})=>{const dd=Math.round((n-t0)/864e5);return `<div class="item"><input type="checkbox" class="ck" data-a="paid" data-id="${x.id}" ${x.paid&&x.paid[cur]?'checked':''}><div style="flex:1"><b>${esc(x.name)}</b><span class="tag">${esc(x.cat||'Other')}</span><span class="tag">${yr(x)?'Yearly':'Monthly'}</span><span class="tag" style="background:${x.who==='Ayah'?'#dbe9f7':x.who==='Bunda'?'#fbdfe9':'var(--acs)'}">${esc(x.who)}</span><div class="mu">Next bill ${n.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} (${dd===0?'today':dd+' days'}) · tick = paid this month</div></div><div class="row"><b>${rp(x.amt)}</b><button class="btn ghost" data-a="del" data-id="${x.id}">Delete</button></div></div>`}).join(''):empty('No subscriptions yet')}</div>`;
 }
-const fmtNo=n=>String(n||'').replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim();
+const fmtNo=n=>hide?'•••• •••• ••••':String(n||'').replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim();
 function banks(){
   const b=by('bank'),own=[...new Set(b.map(x=>x.owner))];
   const card=x=>{const c=BK[x.bank]||['#6b7280',(x.bank||'?').slice(0,3),'#fff'];return `<div class="card"><div class="row between"><div class="row">${BI[x.bank]?`<div style="width:76px;height:48px;border:1px solid var(--bd);border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;padding:4px"><img src="${BI[x.bank]}" alt="${esc(x.bank)}" style="max-width:100%;max-height:100%;object-fit:contain"></div>`:`<div style="width:44px;height:44px;border-radius:12px;background:${c[0]};color:${c[2]};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${c[1].length>2?12:18}px">${esc(c[1])}</div>`}<div><b>${esc(x.bank)}</b>${x.name?`<span class="tag">${esc(x.name)}</span>`:''}<div class="mu">${esc(x.owner)}</div></div></div><button class="btn ghost" data-a="del" data-id="${x.id}">Delete</button></div><div class="row between" style="margin-top:12px"><b style="font-size:19px;letter-spacing:.06em;font-variant-numeric:tabular-nums">${esc(fmtNo(x.no))}</b><button class="btn" data-a="copy" data-v="${esc(String(x.no).replace(/\D/g,''))}">Copy</button></div></div>`};
-  return `<div class="grid"><div class="card"><div class="sub">Accounts</div><div class="big">${b.length}</div></div><div class="card"><div class="sub">Banks</div><div class="big">${new Set(b.map(x=>x.bank)).size}</div></div><div class="card"><div class="sub">Owners</div><div class="big">${own.length}</div></div></div>
+  return eyeRow()+`<div class="grid"><div class="card"><div class="sub">Accounts</div><div class="big">${b.length}</div></div><div class="card"><div class="sub">Banks</div><div class="big">${new Set(b.map(x=>x.bank)).size}</div></div><div class="card"><div class="sub">Owners</div><div class="big">${own.length}</div></div></div>
   <div class="card form" data-f="bank"><select name="bank">${opts([...Object.keys(BK),'Other'])}</select><input name="no" inputmode="numeric" placeholder="Account number"><input name="owner" list="dlo" placeholder="Account holder">${dl('dlo',own)}<input name="name" placeholder="Purpose (General, Emergency Fund…)"><button class="btn" data-a="add" data-t="bank">Add account</button></div>${own.map(o=>`<h2 style="margin:16px 0 8px">${esc(o)}</h2><div class="grid g2">${b.filter(x=>x.owner===o).map(card).join('')}</div>`).join('')||empty('No accounts yet')}`;
 }
 function copyPrev(t){
@@ -346,6 +349,7 @@ function prettyForms(){document.querySelectorAll('#app .card.form[data-f]').forE
     w.appendChild(el);g.appendChild(w)});
   d.appendChild(g);if(btn){btn.classList.add('addbtn');d.appendChild(btn)}f.replaceWith(d)})}
 function render(){
+  {const e=$('#eye');if(e){e.textContent=hide?'🙈':'👁️';e.setAttribute('aria-label',hide?'Show amounts':'Hide amounts')}}
   document.body.dataset.room=room||'';
   $('#rooms').innerHTML=[['Ringkasan','📊 Summary'],['Ayah','👨 Ayah'],['Bunda','👩 Bunda'],['Subscription','🔁 Subscriptions'],['Rekening','🏦 Accounts']].map(([r,l])=>`<button class="room ${room===r?'on':''}" data-v="${r}" data-a="room">${l}</button>`).join('');
   $('#nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" data-a="tab" data-v="${k}">${l}</button>`).join('');
@@ -361,6 +365,7 @@ document.addEventListener('click',e=>{
   else if(a==='shift'){shift(+v);render()}
   else if(a==='who'){fw=v;render()}
   else if(a==='calc'){calc()}
+  else if(a==='eye'){hide=!hide;try{localStorage.setItem('hide',hide?'1':'0')}catch(err){}render()}
   else if(a==='edit'){openEdit(id,b.dataset.i!==undefined?+b.dataset.i:undefined)}
   else if(a==='cp'){copyPrev(v)}
   else if(a==='xport'){exportData(v)}
