@@ -98,6 +98,12 @@ body[data-room="Ayah"] .fld:has(select[name="who"]),body[data-room="Bunda"] .fld
 .tb td{font-weight:500}
 .item{padding:7px 0}.cc>.item:last-child{border-bottom:0}
 details.card{padding:10px 12px}
+nav button[data-v="inc"]{background:#e8f5ec!important;border-color:#bfe3cc!important}
+nav button[data-v="exp"]{background:#fdeceb!important;border-color:#f3c9c4!important}
+nav button[data-v="inc"].on{background:#4f9d6e!important;border-color:#4f9d6e!important;color:#fff!important}
+nav button[data-v="exp"].on{background:#e07a5f!important;border-color:#e07a5f!important;color:#fff!important}
+body[data-tab="inc"]{background:#e8f5ec;--bg:#e8f5ec;--soft:#f3faf6}
+body[data-tab="exp"]{background:#fdeceb;--bg:#fdeceb;--soft:#fef6f5}
 </style></head><body><div class="wrap">
 <div class="hero"><div class="row between"><div><h1>💰 Financial Family Plan</h1><div class="mu">Family finances · Ayah &amp; Bunda</div></div><div class="mu"><span id="stat">Loading…</span> · <a href="#" id="so" style="color:var(--ac)">Sign out</a></div></div></div><div class="row" id="rooms" style="margin:10px 0 0"></div>
 <nav id="nav"></nav><div id="app"><div class="empty">Loading data…</div></div><div id="modal"></div>
@@ -195,9 +201,10 @@ const cmpTable=()=>{const a=pS('Ayah'),b=pS('Bunda'),r=(l,x,y)=>`<tr><td>${l}</t
 function home(){
   const ex=inM('exp'),inc=inM('inc'),te=sum(ex),ti=sum(inc),left=ti-te,rate=ti?Math.round(left/ti*100):0,n=nwStat(),net=n.A-n.D,gs=by('goal'),gt=gs.reduce((a,g)=>a+gT(g),0),gv=gs.reduce((a,g)=>a+(+g.saved||0),0),iv=by('inv'),cost=iv.reduce((a,x)=>a+(+x.cost||0),0),val=iv.reduce((a,x)=>a+(+x.val||0),0),gp=gt?Math.min(100,gv/gt*100):0;
   const up=evs().filter(e=>e.date>=TODAY).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3),A=tr('inc'),B=tr('exp'),dl=p=>{const a=p[5][1],b=p[4][1];return b?Math.round((a-b)/b*100):0},di=dl(A),de=dl(B);
+  const bs=budStat(),bl=bs.reduce((a,z)=>a+(+z.b.lim||0),0),bsp=bs.reduce((a,z)=>a+z.s,0),bp=bl?Math.round(bsp/bl*100):0;
   const kp=(l,v,s,c)=>`<div class="kp"><div class="l">${l}</div><div class="v" style="color:${c||'inherit'}">${v}</div><div class="mu">${s||'&nbsp;'}</div></div>`;
   const eg=by('goal').filter(x=>x.cat==='Emergency Fund'),es=eg.reduce((a,x)=>a+(+x.saved||0),0),inst=inM('exp').filter(x=>x.sisa>0);
-  return mnav()+`<div class="cg">${kp('Income',rp(ti),'','#3b9d8f')}${kp('Expenses',rp(te),'','#e07a5f')}${kp('Left',rp(left),rate+'% saved',left<0?'#e07a5f':'')}${kp('Net worth',rp(net),'',net<0?'#e07a5f':'')}${kp('Investments',rp(val),cost?((val-cost)/cost*100).toFixed(1)+'% vs cost':'',val<cost?'#e07a5f':'')}</div>
+  return mnav()+`<div class="cg">${kp('Income',rp(ti),'','#3b9d8f')}${kp('Expenses',rp(te),'','#e07a5f')}${kp('Left',rp(left),rate+'% saved',left<0?'#e07a5f':'')}${bs.length?kp('Budget',bp+'%',rp(bsp)+' of '+rp(bl),bp>=100?'#e07a5f':bp>=80?'#d9a441':''):''}${kp('Net worth',rp(net),'',net<0?'#e07a5f':'')}${kp('Investments',rp(val),cost?((val-cost)/cost*100).toFixed(1)+'% vs cost':'',val<cost?'#e07a5f':'')}</div>
   ${scope()?'':cmpTable()}${budWarn()}
   <div class="g2c"><div class="cc"><h3>Where the money goes</h3>${donut(ex,te)}</div><div class="cc"><h3>Income vs expenses</h3>${bars()}</div></div>
   <div class="g2c"><div class="cc"><div class="row between"><h3 style="margin:0">Trend</h3><span class="mu"><b class="${di>=0?'pos':'neg'}">Income ${di>=0?'\u25b2':'\u25bc'}${Math.abs(di)}%</b> \u00b7 <b class="${de<=0?'pos':'neg'}">Expenses ${de>=0?'\u25b2':'\u25bc'}${Math.abs(de)}%</b></span></div>${lc2(A,B,150)}</div><div class="cc">${savMini()}</div></div>
@@ -364,10 +371,35 @@ function prettyForms(){document.querySelectorAll('#app .card.form[data-f]').forE
     if(el.placeholder){const m=el.placeholder.match(/\((.*)\)/);el.placeholder=m?m[1]:''}
     w.appendChild(el);g.appendChild(w)});
   d.appendChild(g);if(btn){btn.classList.add('addbtn');d.appendChild(btn)}f.replaceWith(d)})}
+let SR=[];
+function searchIdx(){const R=[];
+  xs('exp').forEach(x=>R.push({k:'Expense',t:tt(x),s:[tt(x),x.notes,x.who,x.ct,x._al?'allocation':''].join(' '),a:x.amt,d:x.date,who:x.who,go:{tab:'exp',ct:x.ct||'Variable'}}));
+  items.filter(i=>i.t==='inc').forEach(x=>R.push({k:'Income',t:tt(x),s:[tt(x),x.cat,x.who].join(' '),a:x.amt,d:x.date,who:x.who,go:{tab:'inc'}}));
+  items.filter(i=>i.t==='sub').forEach(x=>R.push({k:'Subscription',t:x.name,s:[x.name,x.cat,x.cycle,x.who].join(' '),a:x.amt,d:x.date,who:x.who,go:{room:'Subscription'}}));
+  items.filter(i=>i.t==='inv').forEach(x=>R.push({k:'Investment',t:x.name,s:[x.name,x.kind,x.goal,x.who].join(' '),a:x.val,who:x.who,go:{tab:'inv'}}));
+  items.filter(i=>i.t==='goal').forEach(x=>R.push({k:'Goal',t:x.name,s:[x.name,x.cat,x.who].join(' '),a:x.saved,who:x.who,go:{tab:'goal',sub:'goal'}}));
+  items.filter(i=>i.t==='prj').forEach(x=>R.push({k:'Project',t:x.name,s:[x.name,x.status,x.who].join(' '),a:x.budget,d:x.due,who:x.who,go:{tab:'goal',sub:'prj'}}));
+  items.filter(i=>i.t==='ev').forEach(x=>R.push({k:'Activity',t:x.title,s:[x.title,x.kind,x.who].join(' '),d:x.date,who:x.who,go:{tab:'cal'}}));
+  items.filter(i=>i.t==='bank').forEach(x=>R.push({k:'Account',t:(x.bank||'')+(x.name?' \u00b7 '+x.name:''),s:[x.bank,x.name,x.owner,x.no].join(' '),go:{room:'Rekening'}}));
+  items.filter(i=>i.t==='bud').forEach(x=>R.push({k:'Budget',t:x.title,s:[x.title,'budget',x.who].join(' '),a:x.lim,who:x.who,go:{tab:'exp'}}));
+  items.filter(i=>i.t==='nw').forEach(x=>R.push({k:x.kind,t:x.name,s:[x.name,x.kind,x.who].join(' '),a:x.amt,who:x.who,go:{tab:'home'}}));
+  return R}
+function openSearch(){
+  $('#modal').innerHTML=`<div class="mback" id="sback"><div class="mbox" style="max-width:520px"><div class="row" style="flex-wrap:nowrap;gap:8px"><input id="sq" placeholder="Search expenses, income, goals, accounts\u2026" style="flex:1" autocomplete="off"><button class="btn ghost" id="sx">Close</button></div><div id="sres" style="margin-top:10px;max-height:60vh;overflow:auto"><div class="mu">Type to search.</div></div></div></div>`;
+  const q=$('#sq'),close=()=>{$('#modal').innerHTML='';document.removeEventListener('keydown',kd)},kd=e=>{if(e.key==='Escape')close()};
+  window.__closeSearch=close;$('#sx').onclick=close;$('#sback').onclick=e=>{if(e.target.id==='sback')close()};document.addEventListener('keydown',kd);
+  q.oninput=()=>{const w=q.value.toLowerCase().split(/\s+/).filter(Boolean);
+    if(!w.length){SR=[];$('#sres').innerHTML='<div class="mu">Type to search.</div>';return}
+    SR=searchIdx().filter(r=>{const s=r.s.toLowerCase();return w.every(x=>s.includes(x))}).sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,40);
+    $('#sres').innerHTML=SR.length?SR.map((r,i)=>`<div class="item" data-a="sgo" data-i="${i}" style="cursor:pointer"><div><b>${esc(r.t)}</b><span class="tag">${esc(r.k)}</span>${r.who?`<span class="tag">${esc(r.who)}</span>`:''}${r.d?`<div class="mu">${dt(r.d)}</div>`:''}</div>${r.a!=null?`<b>${rp(r.a)}</b>`:''}</div>`).join(''):'<div class="mu">No results.</div>'};
+  q.focus()}
+function goSearch(i){const r=SR[i];if(!r)return;if(window.__closeSearch)window.__closeSearch();const g=r.go;let rm=g.room;if(!rm)rm=(r.who==='Ayah'||r.who==='Bunda')?r.who:(scope()||'Ayah');
+  room=rm;if(g.tab)tab=g.tab;if(g.sub)subs.goal=g.sub;if(g.ct)subs.exp=g.ct;if(r.d&&/^\d{4}-\d{2}/.test(r.d))cur=r.d.slice(0,7);
+  try{localStorage.setItem('room',rm)}catch(e){}render();window.scrollTo(0,0)}
 function render(){
   {const e=$('#eye');if(e){e.textContent=hide?'🙈':'👁️';e.setAttribute('aria-label',hide?'Show amounts':'Hide amounts')}}
-  document.body.dataset.room=room||'';
-  $('#rooms').innerHTML=[['Ringkasan','📊 Summary'],['Ayah','👨 Ayah'],['Bunda','👩 Bunda'],['Subscription','🔁 Subscriptions'],['Rekening','🏦 Accounts']].map(([r,l])=>`<button class="room ${room===r?'on':''}" data-v="${r}" data-a="room">${l}</button>`).join('');
+  document.body.dataset.room=room||'';document.body.dataset.tab=MAIN.includes(room)?'':tab;
+  $('#rooms').innerHTML=[['Ringkasan','📊 Summary'],['Ayah','👨 Ayah'],['Bunda','👩 Bunda'],['Subscription','🔁 Subscriptions'],['Rekening','🏦 Accounts']].map(([r,l])=>`<button class="room ${room===r?'on':''}" data-v="${r}" data-a="room">${l}</button>`).join('')+'<button class="room" data-a="search" title="Search" aria-label="Search" style="margin-left:auto">🔍</button>';
   $('#nav').innerHTML=room==='Ringkasan'?'':TABS.map(([k,l])=>`<button class="${tab===k?'on':''}" data-a="tab" data-v="${k}">${l}</button>`).join('');
   if(!col){gateView();return}
   if(!ready){$('#app').innerHTML=empty('Loading data…');return}
@@ -381,6 +413,8 @@ document.addEventListener('click',e=>{
   else if(a==='shift'){shift(+v);render()}
   else if(a==='who'){fw=v;render()}
   else if(a==='calc'){calc()}
+  else if(a==='search'){openSearch()}
+  else if(a==='sgo'){goSearch(+b.dataset.i)}
   else if(a==='eye'){hide=!hide;try{localStorage.setItem('hide',hide?'1':'0')}catch(err){}render()}
   else if(a==='edit'){openEdit(id,b.dataset.i!==undefined?+b.dataset.i:undefined)}
   else if(a==='cp'){copyPrev(v)}
