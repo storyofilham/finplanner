@@ -348,7 +348,8 @@ const FLD={
   al:[['n','Name','text'],['d','Date','date'],['amt','Amount (Rp)','number'],['ct','Expense type','select:Fixed,Variable'],['to','Move to account (optional)','acct'],['from','Paid from (optional)','acct']]};
 function openEdit(id,ai){const x=items.find(i=>i.id===id);if(!x)return;const al=ai!==undefined,t=al?'al':x.t,F=FLD[t],src=al?(x.al||[])[ai]:x;if(!F||!src)return;
   const val=k=>k==='title'?(src.title||src.name||''):(t==='bank'&&k==='bal'?(acctBal(src)==null?'':acctBal(src)):src[k]);
-  $('#modal').innerHTML=`<div class="mback" id="mback"><div class="mbox"><h2>Edit</h2>${F.map(([k,l,ty])=>{let v=val(k);v=v==null?'':v;const inp=ty==='acct'?`<select id="mf_${k}"><option value="">\u2014</option>${items.filter(i=>i.t==='bank').map(b=>`<option value="${b.id}"${b.id===v?' selected':''}>${esc(acctName(b.id))}</option>`).join('')}</select>`:ty.startsWith('select:')?`<select id="mf_${k}">${[...new Set([...ty.slice(7).split(','),...(v?[v]:[])])].map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input id="mf_${k}" type="${ty}" value="${esc(v)}">`;return `<label for="mf_${k}">${l}</label>${inp}`}).join('')}<div class="row" style="margin-top:16px"><button class="btn" id="msave">Save changes</button><button class="btn ghost" id="mcancel">Cancel</button></div></div></div>`;
+  $('#modal').innerHTML=`<div class="mback" id="mback"><div class="mbox"><h2>Edit</h2>${F.map(([k,l,ty])=>{let v=val(k);v=v==null?'':v;if(typeof v==='number'&&k!=='pct'&&k!=='sisa')v=Math.round(v);const inp=ty==='acct'?`<select id="mf_${k}"><option value="">\u2014</option>${items.filter(i=>i.t==='bank').map(b=>`<option value="${b.id}"${b.id===v?' selected':''}>${esc(acctName(b.id))}</option>`).join('')}</select>`:ty.startsWith('select:')?`<select id="mf_${k}">${[...new Set([...ty.slice(7).split(','),...(v?[v]:[])])].map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select>`:`<input id="mf_${k}" type="${ty}" value="${esc(v)}">`;return `<label for="mf_${k}">${l}</label>${inp}`}).join('')}<div class="row" style="margin-top:16px"><button class="btn" id="msave">Save changes</button><button class="btn ghost" id="mcancel">Cancel</button></div></div></div>`;
+  fixNums($('#modal'));
   const close=()=>{$('#modal').innerHTML=''};
   $('#mcancel').onclick=close;$('#mback').onclick=e=>{if(e.target.id==='mback')close()};
   $('#msave').onclick=()=>{const p={};F.forEach(([k,l,ty])=>{const v=$('#mf_'+k).value;p[k]=ty==='number'?((t==='bank'&&k==='bal'&&v==='')?'':(+v||0)):v});if(t==='bank'&&p.bal!==''&&String(p.bal)!==String(acctBal(src)==null?'':acctBal(src)))p.bdate=TODAY;
@@ -421,6 +422,9 @@ function banks(){
   <div class="card form" data-f="bank"><select name="bank">${opts([...Object.keys(BK),'Other'])}</select><input name="no" inputmode="numeric" placeholder="Account number"><input name="owner" list="dlo" placeholder="Account holder">${dl('dlo',own)}<input name="name" placeholder="Purpose (General, Emergency Fund\u2026)">${WHO}<input name="bal" type="number" inputmode="numeric" placeholder="Current balance (optional)"><button class="btn" data-a="add" data-t="bank">Add account</button></div>
   ${sec('Ayah',grp.Ayah,BL)}${sec('Bunda',grp.Bunda,PK)}${sec('Shared / unassigned',grp.Shared,'var(--mu)')}${b.length?'':empty('No accounts yet')}`;
 }
+const MONEY_SKIP=/^(pct|sisa|p2|p3|e2|e3|e4|tplpct|mf_pct|mf_sisa)$/;
+function fixNums(root){(root||document).querySelectorAll('input[type=number]').forEach(i=>{const k=i.name||i.id||i.dataset.a||'';if(MONEY_SKIP.test(k))return;i.type='text';i.inputMode='numeric';i.dataset.money='1';i.autocomplete='off'})}
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.money){const c=t.value.replace(/[^\d-]/g,'').replace(/(?!^)-/g,'');if(c!==t.value){const p=Math.max(0,(t.selectionStart||0)-(t.value.length-c.length));t.value=c;try{t.setSelectionRange(p,p)}catch(_){}}}});
 function render(){
   {const e=$('#eye');if(e){e.textContent=hide?'🙈':'👁️';e.setAttribute('aria-label',hide?'Show amounts':'Hide amounts')}}
   document.body.dataset.room=room||'';document.body.dataset.tab=MAIN.includes(room)?'':tab;
@@ -429,7 +433,7 @@ function render(){
   if(!col){gateView();return}
   if(!ready){$('#app').innerHTML=empty('Loading data…');return}
   $('#app').innerHTML=room==='Rekening'?banks():room==='Subscription'?subsc():room==='Ringkasan'?home():{home,exp:expense,inc:income,goal:goalTab,inv:invest,cal:kal}[tab]();
-  if(!MAIN.includes(room)){if(tab==='goal'&&subs.goal==='edu')calc();if(tab==='inv')proj()}addEdit();prettyForms();if(hl){const h=hl;hl=null;setTimeout(()=>flash(h),80)}
+  if(!MAIN.includes(room)){if(tab==='goal'&&subs.goal==='edu')calc();if(tab==='inv')proj()}addEdit();prettyForms();fixNums($('#app'));if(hl){const h=hl;hl=null;setTimeout(()=>flash(h),80)}
 }
 const save=(id,patch)=>{const x=items.find(i=>i.id===id);if(!x)return;const{id:_,...d}=x;return col.doc(id).set({...d,...patch}).catch(()=>alert('Could not save. Please make sure you have edit access.'))};
 document.addEventListener('click',e=>{
@@ -462,7 +466,7 @@ document.addEventListener('click',e=>{
   else if(a==='upv'){const n=+$('#v'+id).value||0;save(id,{val:n,hist:[...(x.hist||[]).filter(h=>h.d!==TODAY),{d:TODAY,v:n}]})}
   else if(a==='add'){
     const f=b.closest('[data-f]'),d={t:b.dataset.t};
-    f.querySelectorAll('input,select').forEach(i=>d[i.name]=i.type==='number'?(+i.value||0):i.value);
+    f.querySelectorAll('input,select').forEach(i=>d[i.name]=(i.type==='number'||i.dataset.money)?(+i.value||0):i.value);
     if(!(d.name||d.title||d.no)){alert('Please fill in the name or title first.');return}
     if(d.t==='ev')d.yearly=!!d.yearly;
     if((d.t==='exp'||d.t==='inc')&&!d.amt){alert('Please enter an amount first.');return}
